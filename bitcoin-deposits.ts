@@ -36,7 +36,7 @@ function generateBitcoinAddress():BitcoinAddressData   {
     return {publicKey: address, privateWIF: keyPair.toWIF()}
 }
 
-async function CreateTransaction(sender: BitcoinAddressData, receiver: string, satoshiAmt: number): Promise<string>{
+async function createTransaction(sender: BitcoinAddressData, receiver: string, satoshiAmt: number): Promise<string>{
     //creates a transaction
 
     if (sender.publicKey == undefined){
