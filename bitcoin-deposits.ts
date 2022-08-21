@@ -116,7 +116,7 @@ async function updateBalances(receiver: string, changesMade: BalanceChanges | un
 
     if (typeof changesMade == 'undefined'){
         changesMade = {confirmed: "", unconfirmed: "", confirmedUpdatedBy: 0, unconfirmedUpdatedBy: 0}
-        var result = await axios.get(`https://sochain.com/api/v2/get_address_balance/BTCTEST/${receiver}`);
+        var result = await axios.get(`https://sochain.com/api/v2/get_address_balance/BTCTEST/${receiver}/6`);
         changesMade.confirmed = result.data.data.confirmed_balance
         changesMade.unconfirmed = result.data.data.unconfirmed_balance
         customerData[receiver] = changesMade
