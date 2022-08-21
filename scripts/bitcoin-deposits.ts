@@ -4,6 +4,7 @@ import * as bitcoin from 'bitcoinjs-lib';
 import * as bitcore from 'bitcore-lib'
 import axios from 'axios';
 import fs from 'fs'
+import path from 'path'
 
 const ECPair = ECPairFactory(ecc);
 const TESTNET = bitcoin.networks.testnet;
