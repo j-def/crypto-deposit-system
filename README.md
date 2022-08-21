@@ -4,7 +4,7 @@
 
 - [X] Bitcoin
 - [] Bitcoin Cash
-- [] Ethereum
+- [X] Ethereum
 - [] Solana
 - [] XRP
 - [] Dogecoin
