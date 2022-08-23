@@ -17,13 +17,17 @@
   },
   "homepage": "https://github.com/j-def/crypto-deposit-system#readme",
   "dependencies": {
+    "@solana/web3.js": "^1.53.0",
     "axios": "^0.27.2",
+    "base-58": "^0.0.1",
+    "base58-encode": "^0.2.0",
     "bip32": "^3.0.1",
     "bitcoinjs-lib": "^6.0.2",
     "bitcore-lib": "^8.25.36",
     "ecpair": "^2.0.1",
     "tiny-secp256k1": "^2.2.1",
-    "web3": "^1.7.5"
+    "web3": "^1.7.5",
+    "xrpl": "^2.3.1"
   },
   "devDependencies": {
     "@types/bitcore-lib": "^0.15.3"

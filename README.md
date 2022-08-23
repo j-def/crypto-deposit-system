@@ -6,6 +6,6 @@
 -  Bitcoin Cash
 - [X] Ethereum
 -  Solana
--  XRP
+- [X] XRP
 -  Dogecoin
 -  Shiba Inu
