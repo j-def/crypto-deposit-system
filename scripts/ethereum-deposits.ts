@@ -160,6 +160,8 @@ async function findNewErc20Deposits(receiver: string, contractAddress: string): 
         firstConfirmed = parseInt(customerData[contractAddress][receiver].confirmed)
         firstUnconfirmed = parseInt(customerData[contractAddress][receiver].unconfirmed)
     }
+    changes.confirmed = firstConfirmed.toString()
+    changes.unconfirmed = firstUnconfirmed.toString()
     
     let retryAmt = 60
     let tries = 0

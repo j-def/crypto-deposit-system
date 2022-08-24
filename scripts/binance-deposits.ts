@@ -198,6 +198,10 @@ async function findNewBep20Deposits(receiver: string, contractAddress: string): 
     return changes
 }
 
+async function withdrawBepToken(sender: EthereumAddressData, receiver: string){
+    
+}
+
 var add1 = {
     publicKey: '0x39476Be9502BC2693A275074C34fD70B982F8156',
     privateKey: '0xa798b8970c6daa90e605af90e170abe8181122e388278230cdfe288761597210'
