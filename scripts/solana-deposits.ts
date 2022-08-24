@@ -99,8 +99,4 @@ async function updateBalances(receiver: string, changesMade: BalanceChanges | un
     return changesMade
 }
 
-let add = {
-    publicKey: '3mcE75owbpUp2M4rPz218KtwSYHKDq31W4ammDjQb7fe',
-    privateKey: '199,163,169,50,47,17,214,60,175,238,54,212,159,3,72,164,89,255,159,243,245,93,52,201,102,168,183,179,69,58,81,99,41,36,194,114,72,125,74,199,52,253,122,253,131,175,164,91,143,86,131,232,0,67,43,69,236,21,18,86,169,180,28,153'
-  }
-updateBalances("3mcE75owbpUp2M4rPz218KtwSYHKDq31W4ammDjQb7fe")
+export {updateBalances, findNewDeposits, sendTransaction, createTransaction, generateAddr}

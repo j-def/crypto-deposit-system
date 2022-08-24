@@ -1,9 +1,8 @@
-//var Web3 = require('web3');
 import Web3 from 'web3'
 import { AbiItem } from 'web3-utils'
 import fs from 'fs'
 import path from 'path'
-const web3 = new Web3('https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161')
+const web3 = new Web3('https://data-seed-prebsc-1-s1.binance.org:8545/')
 
 interface EthereumAddressData {
     publicKey: string | undefined,
@@ -40,23 +39,19 @@ async function createTransaction(sender: EthereumAddressData, receiver: string, 
         txData,
         sender.privateKey
      );
-    console.log(signedTx.rawTransaction)
      return signedTx.rawTransaction
 }
 
-async function findNewDeposits(receiver: string | undefined): Promise<BalanceChanges | undefined>{
-    if (typeof receiver == "undefined"){
-        return undefined
-    }
-    var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/eth-balances.json'));
+async function findNewDeposits(receiver: string): Promise<BalanceChanges | undefined>{
+    var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/bsc-balances.json'));
     var customerData = JSON.parse(balancesData.toString())[receiver];
 
-    let retryAmt = 60
+    let retryAmt = 1000
     let tries = 0
 
     while (tries < retryAmt){
         var currentBlock = await web3.eth.getBlockNumber()
-        var blockConfirmedBalance = await web3.eth.getBalance(receiver, currentBlock-10)
+        var blockConfirmedBalance = await web3.eth.getBalance(receiver, currentBlock-100)
         var blockUnconfirmedBalance = (parseInt(await web3.eth.getBalance(receiver, currentBlock)) - parseInt(blockConfirmedBalance)).toString()
 
         if (blockConfirmedBalance !== customerData.confirmed || blockUnconfirmedBalance !== customerData.unconfirmed){
@@ -79,7 +74,7 @@ async function updateBalances(receiver: string | undefined, changesMade: Balance
         return undefined
     }
     //Updates the balances.json with an updated confirmed and unconfirmed balance
-    var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/eth-balances.json'));
+    var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/bsc-balances.json'));
     var customerData = JSON.parse(balancesData.toString());
 
         
@@ -90,19 +85,19 @@ async function updateBalances(receiver: string | undefined, changesMade: Balance
     if (typeof changesMade == 'undefined'){
         changesMade = {confirmed: "", unconfirmed: "", confirmedUpdatedBy: 0, unconfirmedUpdatedBy: 0}
         var currentBlock = await web3.eth.getBlockNumber()
-        changesMade.confirmed = await web3.eth.getBalance(receiver, currentBlock-10)
+        changesMade.confirmed = await web3.eth.getBalance(receiver, currentBlock-100)
         changesMade.unconfirmed = (parseInt(await web3.eth.getBalance(receiver, currentBlock)) - parseInt(changesMade.confirmed)).toString()
     }
 
     customerData[receiver].confirmed = changesMade.confirmed
     customerData[receiver].unconfirmed = changesMade.unconfirmed
 
-    fs.writeFileSync(path.join(path.dirname(__dirname), 'balances/eth-balances.json'), JSON.stringify(customerData));
+    fs.writeFileSync(path.join(path.dirname(__dirname), 'balances/bsc-balances.json'), JSON.stringify(customerData));
     return changesMade
 }
 
 
-async function updateErc20Balance(receiver: string, contractAddress: string, changesMade: BalanceChanges | undefined = undefined): Promise<BalanceChanges>{
+async function updateBep20Balance(receiver: string, contractAddress: string, changesMade: BalanceChanges | undefined = undefined): Promise<BalanceChanges>{
 
     var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/erc20-balances.json'));
     var customerData = JSON.parse(balancesData.toString());
@@ -125,7 +120,7 @@ async function updateErc20Balance(receiver: string, contractAddress: string, cha
         var unconfirmed = 0
         var blockNumber = await web3.eth.getBlockNumber()
         var pastEvents = await contract.getPastEvents("Transfer", {
-            fromBlock: blockNumber - 10,
+            fromBlock: blockNumber - 100,
             filter: {"to": receiver}
         })
         pastEvents.forEach((val, idx) => {
@@ -142,19 +137,19 @@ async function updateErc20Balance(receiver: string, contractAddress: string, cha
     changes.unconfirmed = (unconfirmed).toString()
     customerData[contractAddress][receiver].confirmed = (userBalance - unconfirmed).toString()
     customerData[contractAddress][receiver].unconfirmed = (unconfirmed).toString()
-    fs.writeFileSync(path.join(path.dirname(__dirname), 'balances/erc20-balances.json'), JSON.stringify(customerData));
+    fs.writeFileSync(path.join(path.dirname(__dirname), 'balances/bep20-balances.json'), JSON.stringify(customerData));
     return changes
 }
 
-async function findNewErc20Deposits(receiver: string, contractAddress: string): Promise<BalanceChanges>{
-    var abi = fs.readFileSync(path.join(path.dirname(__dirname), 'contractInterfaces/erc20.abi.json'))
+async function findNewBep20Deposits(receiver: string, contractAddress: string): Promise<BalanceChanges>{
+    var abi = fs.readFileSync(path.join(path.dirname(__dirname), 'contractInterfaces/bep20.abi.json'))
     var contract = new web3.eth.Contract(JSON.parse(abi.toString()) as AbiItem, contractAddress)
     var changes = {"confirmed": "0", "unconfirmed": "0", "confirmedUpdatedBy": 0, "unconfirmedUpdatedBy": 0}
 
     var firstConfirmed = 0
     var firstUnconfirmed = 0
 
-    var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/erc20-balances.json'));
+    var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/bep20-balances.json'));
     var customerData = JSON.parse(balancesData.toString());
     if (Object.keys(customerData).includes(contractAddress) && Object.keys(customerData[contractAddress]).includes(receiver)){
         firstConfirmed = parseInt(customerData[contractAddress][receiver].confirmed)
@@ -171,12 +166,12 @@ async function findNewErc20Deposits(receiver: string, contractAddress: string): 
             filter: {"to": receiver}
         })
         if (newEvents.length != 0){
-            var confirmed = await contract.methods.balanceOf(receiver).call()
+            var confirmed = 0
             var unconfirmed = 0
-
+            confirmed = await contract.methods.balanceOf(receiver).call()
             blockNumber = await web3.eth.getBlockNumber()
             var unconfirmedEvents = await contract.getPastEvents("Transfer", {
-                fromBlock: blockNumber - 10,
+                fromBlock: blockNumber - 100,
                 filter: {"to": receiver}
             })
             if (unconfirmedEvents.length > 0){
@@ -203,6 +198,20 @@ async function findNewErc20Deposits(receiver: string, contractAddress: string): 
     return changes
 }
 
+var add1 = {
+    publicKey: '0x39476Be9502BC2693A275074C34fD70B982F8156',
+    privateKey: '0xa798b8970c6daa90e605af90e170abe8181122e388278230cdfe288761597210'
+  }
+
+var add2 = {
+    publicKey: '0xe5e088C80E71397532958c8861019aC8FA65C9ec',
+    privateKey: '0x9e6b5673e3cbb3a6812476d69970773f711719469ae212d5a2bba649aeb3bd50'
+  }
 
 
-export { updateBalances, generateAddr, createTransaction, findNewDeposits, findNewErc20Deposits, updateErc20Balance}
+findNewBep20Deposits(add2.publicKey, '0xEC5dCb5Dbf4B114C9d0F65BcCAb49EC54F6A0867').then((val) => {
+    console.log(val)
+})
+
+
+export { updateBalances, generateAddr, createTransaction, findNewDeposits, updateBep20Balance, findNewBep20Deposits}

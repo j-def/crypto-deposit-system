@@ -114,14 +114,4 @@ async function updateBalances(receiver: string, changesMade: BalanceChanges | un
 }
 
 
-
-
-var add = {
-    publicKey: 'EDA7DA270D9 C4D7B876E0D892D094FC6947CFC1B7CBE1781772117A462407A0DB0',
-    classicAddress: 'rmVGsdqBwBwccfmQUvKFmh7cZupCm2h9o',
-    privateKey: 'ED831830C1CD8CF75EA7AFE11AF0CDCA3FA61294630A216D5E9D567F6AB89B1DB5'
-}
-
-findNewDeposits(add.classicAddress).then((resp) => {
-    updateBalances(add.classicAddress, resp)
-})
+export { updateBalances, findNewDeposits, createTransaction, generateAddr}
