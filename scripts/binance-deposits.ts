@@ -42,9 +42,18 @@ async function createTransaction(sender: EthereumAddressData, receiver: string, 
      return signedTx.rawTransaction
 }
 
-async function findNewDeposits(receiver: string): Promise<BalanceChanges | undefined>{
+async function findNewDeposits(receiver: string | undefined): Promise<BalanceChanges | undefined>{
+    if (typeof receiver == "undefined"){
+        return undefined
+    }
     var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/bsc-balances.json'));
-    var customerData = JSON.parse(balancesData.toString())[receiver];
+    var customerData = JSON.parse(balancesData.toString());
+
+    if (Object.keys(customerData).includes(receiver)){
+        customerData = customerData[receiver]
+    } else{
+        customerData = {"confirmed": "0", "unconfirmed": "0"}
+    }
 
     let retryAmt = 1000
     let tries = 0
@@ -99,7 +108,7 @@ async function updateBalances(receiver: string | undefined, changesMade: Balance
 
 async function updateBep20Balance(receiver: string, contractAddress: string, changesMade: BalanceChanges | undefined = undefined): Promise<BalanceChanges>{
 
-    var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/erc20-balances.json'));
+    var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/bep20-balances.json'));
     var customerData = JSON.parse(balancesData.toString());
 
     if (!Object.keys(customerData).includes(contractAddress)){
@@ -113,9 +122,11 @@ async function updateBep20Balance(receiver: string, contractAddress: string, cha
 
 
     if (typeof changesMade == 'undefined'){
-        var abi = fs.readFileSync(path.join(path.dirname(__dirname), 'contractInterfaces/erc20.abi.json'))
+        console.log(1)
+        var abi = fs.readFileSync(path.join(path.dirname(__dirname), 'contractInterfaces/bep20.abi.json'))
         var contract = new web3.eth.Contract(JSON.parse(abi.toString()) as AbiItem, contractAddress)
         var userBalance: number = await contract.methods.balanceOf(receiver).call()
+        console.log(userBalance)
 
         var unconfirmed = 0
         var blockNumber = await web3.eth.getBlockNumber()
@@ -128,9 +139,12 @@ async function updateBep20Balance(receiver: string, contractAddress: string, cha
         })
     }
     else {
+        console.log(2)
         var unconfirmed = parseInt(changesMade.unconfirmed)
         var userBalance = parseInt(changesMade.confirmed) + unconfirmed
     }
+
+    console.log(userBalance, unconfirmed)
 
 
     changes.confirmed = (userBalance - unconfirmed).toString()
@@ -160,11 +174,13 @@ async function findNewBep20Deposits(receiver: string, contractAddress: string): 
     let tries = 0
 
     var blockNumber = await web3.eth.getBlockNumber()
+    console.log(blockNumber)
     while(tries < retryAmt){
         var newEvents = await contract.getPastEvents("Transfer", {
             fromBlock: blockNumber,
             filter: {"to": receiver}
         })
+        console.log(newEvents.length)
         if (newEvents.length != 0){
             var confirmed = 0
             var unconfirmed = 0
@@ -198,8 +214,34 @@ async function findNewBep20Deposits(receiver: string, contractAddress: string): 
     return changes
 }
 
-async function withdrawBepToken(sender: EthereumAddressData, receiver: string){
-    
+async function withdrawBep20Token(sender: EthereumAddressData, receiver: string, contractAddress: string, amount: string): Promise<string | undefined>{
+    var abi = fs.readFileSync(path.join(path.dirname(__dirname), 'contractInterfaces/bep20.abi.json'))
+    var contract = new web3.eth.Contract(JSON.parse(abi.toString()) as AbiItem, contractAddress, { from: sender.publicKey })
+    if (typeof sender.privateKey != 'string' || typeof sender.publicKey != 'string'){
+        return undefined
+    }
+    var count = await web3.eth.getTransactionCount(sender.publicKey)
+    var txData = contract.methods.transfer(receiver, amount).encodeABI()
+    var tx = {
+        'gasLimit': web3.utils.toHex(2100000),
+        'gasPrice': web3.utils.toHex(2 * 1e10),
+        'to': receiver,
+        'value': '0x0',
+        'data': txData,
+        'from': sender.publicKey,
+        'nonce': count
+    }
+    var signedTx = await web3.eth.accounts.signTransaction(tx, sender.privateKey)
+    if (typeof signedTx.rawTransaction == 'undefined'){
+        return undefined
+    }
+    console.log(signedTx.rawTransaction)
+    return signedTx.rawTransaction
+}
+
+async function sendTx(signedTx: string){
+    var resp = await web3.eth.sendSignedTransaction(signedTx)
+    console.log(resp)
 }
 
 var add1 = {
@@ -212,9 +254,17 @@ var add2 = {
     privateKey: '0x9e6b5673e3cbb3a6812476d69970773f711719469ae212d5a2bba649aeb3bd50'
   }
 
+ var addr3 = {
+    publicKey: '0xf28F881ACFA3300Ce49817050c8a05Da0Ebe48f2',
+    privateKey: '0xd2878adfc520f9b70e1bb1875c0ddb257d30b33c8a8577699349fdde8b97926c'
+  }
 
-findNewBep20Deposits(add2.publicKey, '0xEC5dCb5Dbf4B114C9d0F65BcCAb49EC54F6A0867').then((val) => {
-    console.log(val)
+
+
+withdrawBep20Token(add1, add2.publicKey, '0xEC5dCb5Dbf4B114C9d0F65BcCAb49EC54F6A0867', '10000000').then((val) => {
+    if (typeof val == 'string'){
+        sendTx(val)
+    }
 })
 
 

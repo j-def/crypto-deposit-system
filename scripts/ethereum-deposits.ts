@@ -49,7 +49,13 @@ async function findNewDeposits(receiver: string | undefined): Promise<BalanceCha
         return undefined
     }
     var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/eth-balances.json'));
-    var customerData = JSON.parse(balancesData.toString())[receiver];
+    var customerData = JSON.parse(balancesData.toString());
+
+    if (Object.keys(customerData).includes(receiver)){
+        customerData = customerData[receiver]
+    } else{
+        customerData = {"confirmed": "0", "unconfirmed": "0"}
+    }
 
     let retryAmt = 60
     let tries = 0
