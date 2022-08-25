@@ -2,6 +2,7 @@ import ECPairFactory from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 import * as bitcoin from 'bitcoinjs-lib';
 import * as bitcore from 'bitcore-lib';
+import * as dogecore from 'dogecore-lib'
 import axios from 'axios';
 import fs from 'fs'
 import path from 'path'
@@ -47,12 +48,12 @@ async function createTransaction(sender: DogeAddressData, receiver: string, sato
         return ""
     }
 
-    var result = await axios.get(`https://sochain.com/api/v2/get_tx_unspent/BTCTEST/${sender.publicKey}`);
+    var result = await axios.get(`https://sochain.com/api/v2/get_tx_unspent/DOGETEST/${sender.publicKey}`);
 
     let totalAmountAvailable = 0;
     let inputCount = 0;
     let outputCount = 2;
-    let inputs: bitcore.Transaction.UnspentOutput[] = [];
+    let inputs: dogecore.Transaction.UnspentOutput[] = [];
 
     result.data.data.txs.forEach(async (element: any) => {
         let utxo: Temputxo = {
@@ -69,9 +70,9 @@ async function createTransaction(sender: DogeAddressData, receiver: string, sato
         });
 
 
-    var privateKey = new bitcore.PrivateKey(sender.privateWIF);
+    var privateKey = new dogecore.PrivateKey(sender.privateWIF);
 
-    var transaction = new bitcore.Transaction().from(inputs)
+    var transaction = new dogecore.Transaction().from(inputs)
         .to(receiver, satoshiAmt)
         .change(sender.publicKey)
         .sign(privateKey);
@@ -82,22 +83,26 @@ async function createTransaction(sender: DogeAddressData, receiver: string, sato
 async function findNewDeposits(receiver: string): Promise<BalanceChanges>{
         //Finds new deposits after running this function
         //Retries 60 times and waits 5 seconds between each retry
-        var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/btc-balances.json'));
-        var customerData = JSON.parse(balancesData.toString())[receiver];
-    
+        var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/doge-balances.json'));
+        var customerData = JSON.parse(balancesData.toString());
+        var changes = {confirmed: "0.00000000", unconfirmed: "0.00000000", confirmedUpdatedBy: 0, unconfirmedUpdatedBy: 0}
+
+        if (Object.keys(customerData).includes(receiver)){
+            changes.confirmed = customerData[receiver].confirmed
+            changes.unconfirmed = customerData[receiver].unconfirmed
+        }
         let retryAmt = 60
         let tries = 0
         var shouldEnd = false
-        var changes = {confirmed: "", unconfirmed: "", confirmedUpdatedBy: 0, unconfirmedUpdatedBy: 0}
         while (tries < retryAmt){
-            var result = await axios.get(`https://sochain.com/api/v2/get_address_balance/BTCTEST/${receiver}`);
-            if (result.data.data.confirmed_balance !== customerData.confirmed){
-                changes.confirmedUpdatedBy = parseFloat(changes.confirmed) - parseFloat(result.data.data.confirmed_balance)
+            var result = await axios.get(`https://sochain.com/api/v2/get_address_balance/DOGETEST/${receiver}`);
+            if (result.data.data.confirmed_balance !== changes.confirmed){
+                changes.confirmedUpdatedBy = parseFloat(result.data.data.confirmed_balance) - parseFloat(changes.confirmed)
                 changes.confirmed = result.data.data.confirmed_balance
                 shouldEnd = true
             }
-            if (result.data.data.unconfirmed_balance !== customerData.unconfirmed){
-                changes.unconfirmedUpdatedBy = parseFloat(changes.unconfirmed) - parseFloat(result.data.data.unconfirmed_balance)
+            if (result.data.data.unconfirmed_balance !== changes.unconfirmed){
+                changes.unconfirmedUpdatedBy = parseFloat(result.data.data.unconfirmed_balance) - parseFloat(changes.unconfirmed)
                 changes.unconfirmed = result.data.data.unconfirmed_balance
                 shouldEnd = true
             }
@@ -115,28 +120,41 @@ async function findNewDeposits(receiver: string): Promise<BalanceChanges>{
 
 async function updateBalances(receiver: string, changesMade: BalanceChanges | undefined = undefined): Promise<BalanceChanges>{
     //Updates the balances.json with an updated confirmed and unconfirmed balance
-    var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/btc-balances.json'));
+    var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/doge-balances.json'));
     var customerData = JSON.parse(balancesData.toString());
 
     if (!Object.keys(customerData).includes(receiver)){
-        customerData[receiver] = {confirmed: "0", unconfirmed: "0"}
+        customerData[receiver] = {confirmed: "0.00000000", unconfirmed: "0.00000000"}
     }
 
     if (typeof changesMade == 'undefined'){
         changesMade = {confirmed: "", unconfirmed: "", confirmedUpdatedBy: 0, unconfirmedUpdatedBy: 0}
-        var result = await axios.get(`https://sochain.com/api/v2/get_address_balance/BTCTEST/${receiver}/6`);
+        var result = await axios.get(`https://sochain.com/api/v2/get_address_balance/DOGETEST/${receiver}`);
         changesMade.confirmed = result.data.data.confirmed_balance
         changesMade.unconfirmed = result.data.data.unconfirmed_balance
+        console.log(result.data)
     }
 
     customerData[receiver].confirmed = changesMade.confirmed
     customerData[receiver].unconfirmed = changesMade.unconfirmed
 
-    fs.writeFileSync(path.join(path.dirname(__dirname), 'balances/btc-balances.json'), JSON.stringify(customerData));
+    fs.writeFileSync(path.join(path.dirname(__dirname), 'balances/doge-balances.json'), JSON.stringify(customerData));
 
     return changesMade
 }
 
-console.log(generateDogeAddress())
+var add1 = {
+    publicKey: 'nXys2Sm91M3Gt3KooJHHLZrrzAbZFe8S5Z',
+    privateWIF: 'cfz4xpLcz19Cnb55ERFFbqLFuKrXX94cX6WpcBEW7cKedu2Bpraw'
+  }
 
+var add2 = {
+    publicKey: 'nnymy4wn248nDTKXBu6RCw8ZNNE5sTtoEY',
+    privateWIF: 'ckPkRwCheFiRVXhY6dJfh1TkVFdYL9Gd4g7AiGS4FFwH3Eb2akpW'
+  }
+  
+
+  createTransaction(add1, add2.publicKey, 100000000).then((val) => {
+    console.log(val)
+  })
 export {generateDogeAddress, createTransaction, findNewDeposits, updateBalances}

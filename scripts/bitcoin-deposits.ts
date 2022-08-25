@@ -80,20 +80,25 @@ async function findNewDeposits(receiver: string): Promise<BalanceChanges>{
         //Finds new deposits after running this function
         //Retries 60 times and waits 5 seconds between each retry
         var balancesData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/btc-balances.json'));
-        var customerData = JSON.parse(balancesData.toString())[receiver];
+        var customerData = JSON.parse(balancesData.toString());
+        var changes = {confirmed: "0.00000000", unconfirmed: "0.00000000", confirmedUpdatedBy: 0, unconfirmedUpdatedBy: 0}
+
+        if (Object.keys(customerData).includes(receiver)){
+            changes.confirmed = customerData[receiver].confirmed
+            changes.unconfirmed = customerData[receiver].unconfirmed
+        }
     
         let retryAmt = 60
         let tries = 0
         var shouldEnd = false
-        var changes = {confirmed: "", unconfirmed: "", confirmedUpdatedBy: 0, unconfirmedUpdatedBy: 0}
         while (tries < retryAmt){
             var result = await axios.get(`https://sochain.com/api/v2/get_address_balance/BTCTEST/${receiver}`);
-            if (result.data.data.confirmed_balance !== customerData.confirmed){
+            if (result.data.data.confirmed_balance !== parseInt(changes.confirmed)){
                 changes.confirmedUpdatedBy = parseFloat(changes.confirmed) - parseFloat(result.data.data.confirmed_balance)
                 changes.confirmed = result.data.data.confirmed_balance
                 shouldEnd = true
             }
-            if (result.data.data.unconfirmed_balance !== customerData.unconfirmed){
+            if (result.data.data.unconfirmed_balance !== parseInt(changes.unconfirmed)){
                 changes.unconfirmedUpdatedBy = parseFloat(changes.unconfirmed) - parseFloat(result.data.data.unconfirmed_balance)
                 changes.unconfirmed = result.data.data.unconfirmed_balance
                 shouldEnd = true
