@@ -63,7 +63,7 @@ async function createTransaction(sender: BitcoinAddressData, receiver: string, s
         inputCount += 1;
         let utxoModified = new bitcore.Transaction.UnspentOutput(utxo)
         inputs.push(utxoModified);
-        });
+    });
 
 
     var privateKey = new bitcore.PrivateKey(sender.privateWIF);

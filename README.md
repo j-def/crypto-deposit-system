@@ -4,7 +4,7 @@
 
 - [X] Bitcoin
 -  Dogecoin
--  Litecoin
+- [X] Litecoin
 - [X] Ethereum
 - [X] ERC-20
 - [X] Solana

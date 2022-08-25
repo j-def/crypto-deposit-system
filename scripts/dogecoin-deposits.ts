@@ -2,7 +2,7 @@ import ECPairFactory from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 import * as bitcoin from 'bitcoinjs-lib';
 import * as bitcore from 'bitcore-lib';
-import * as dogecore from 'dogecore-lib'
+const dogecore = require('dogecore-lib')
 import axios from 'axios';
 import fs from 'fs'
 import path from 'path'
@@ -41,44 +41,6 @@ function generateDogeAddress():DogeAddressData   {
     return {publicKey: address, privateWIF: keyPair.toWIF()}
 }
 
-async function createTransaction(sender: DogeAddressData, receiver: string, satoshiAmt: number): Promise<string>{
-    //creates a transaction
-
-    if (sender.publicKey == undefined){
-        return ""
-    }
-
-    var result = await axios.get(`https://sochain.com/api/v2/get_tx_unspent/DOGETEST/${sender.publicKey}`);
-
-    let totalAmountAvailable = 0;
-    let inputCount = 0;
-    let outputCount = 2;
-    let inputs: dogecore.Transaction.UnspentOutput[] = [];
-
-    result.data.data.txs.forEach(async (element: any) => {
-        let utxo: Temputxo = {
-            satoshis: Math.floor(Number(element.value) * 100000000),
-            script: element.script_hex,
-            address: result.data.data.address,
-            txId: element.txid,
-            outputIndex: element.output_no
-        };
-        totalAmountAvailable += utxo.satoshis;
-        inputCount += 1;
-        let utxoModified = new bitcore.Transaction.UnspentOutput(utxo)
-        inputs.push(utxoModified);
-        });
-
-
-    var privateKey = new dogecore.PrivateKey(sender.privateWIF);
-
-    var transaction = new dogecore.Transaction().from(inputs)
-        .to(receiver, satoshiAmt)
-        .change(sender.publicKey)
-        .sign(privateKey);
-
-    return transaction.serialize();
-}
 
 async function findNewDeposits(receiver: string): Promise<BalanceChanges>{
         //Finds new deposits after running this function
@@ -143,6 +105,42 @@ async function updateBalances(receiver: string, changesMade: BalanceChanges | un
     return changesMade
 }
 
+async function createTransaction(sender: DogeAddressData, receiver: string, satoshiAmt: number){
+    dogecore.Networks.defaultNetwork = dogecore.Networks.testnet
+    var privateKey = new dogecore.PrivateKey(sender.privateWIF);
+    var result = await axios.get(`https://sochain.com/api/v2/get_tx_unspent/DOGETEST/${sender.publicKey}`);
+    let totalAmountAvailable = 0;
+    let inputCount = 0;
+    let outputCount = 2;
+    var inputs: typeof dogecore.Transaction.UnspentOutput[] = []
+
+    result.data.data.txs.forEach(async (element: any) => {
+        let utxo: Temputxo = {
+            satoshis: Math.floor(Number(element.value) * 100000000),
+            script: element.script_hex,
+            address: result.data.data.address,
+            txId: element.txid,
+            outputIndex: element.output_no
+        };
+        totalAmountAvailable += utxo.satoshis;
+        inputCount += 1;
+        let utxoModified = new dogecore.Transaction.UnspentOutput(utxo)
+        inputs.push(utxoModified);
+    });
+
+    console.log(inputs)
+
+    var privateKey = new dogecore.PrivateKey(sender.privateWIF);
+
+    var transaction = new dogecore.Transaction().from(inputs)
+    .to(receiver, satoshiAmt)
+    .change(sender.publicKey)
+    .sign(privateKey);
+
+    return transaction.serialize();
+    
+}
+
 var add1 = {
     publicKey: 'nXys2Sm91M3Gt3KooJHHLZrrzAbZFe8S5Z',
     privateWIF: 'cfz4xpLcz19Cnb55ERFFbqLFuKrXX94cX6WpcBEW7cKedu2Bpraw'
@@ -154,7 +152,9 @@ var add2 = {
   }
   
 
-  createTransaction(add1, add2.publicKey, 100000000).then((val) => {
-    console.log(val)
-  })
+createTransaction(add1, add2.publicKey, 10000000).then((val) => {
+    axios.post("https://sochain.com/api/v2/send_tx/DOGETEST", {"tx_hex": val}).then((val) => {
+        console.log(val.data)
+    })
+})
 export {generateDogeAddress, createTransaction, findNewDeposits, updateBalances}

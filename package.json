@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@types/bitcore-lib": "^0.15.3",
-    "coininfo": "^5.2.1"
+    "coininfo": "^5.2.1",
+    "litecore-lib": "^0.13.22"
   }
 }
