@@ -6,9 +6,9 @@
 -  Bitcoin Cash
 -  Dogecoin
 - [X] Ethereum
--  ERC-20
+- [X] ERC-20
 - [X] Solana
-- SPL-Tokens
+- [X] SPL-Tokens
 - [X] XRP
 - [X] Binance Smart Chain
-- BEP-20
+- [X] BEP-20

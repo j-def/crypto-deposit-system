@@ -1,8 +1,10 @@
+
+
 import * as web3 from '@solana/web3.js'
 import crypto from 'crypto'
 import path from 'path'
 import fs from 'fs'
-import { token } from '@project-serum/anchor/dist/cjs/utils'
+import { getOrCreateAssociatedTokenAccount, createTransferCheckedInstruction, getMint } from '@solana/spl-token';
 
 interface SolanaAddressData {
     publicKey: string
@@ -177,6 +179,35 @@ async function updateSplBalance(receiver: string, tokenMint: string, changesMade
     return changes
 }
 
+async function sendSplToken(sender: SolanaAddressData, receiver: string, tokenMint: string, amount: string | number){
+    var senderKeypair = buildKeypairFromStringSecret(sender.privateKey)
+    var receiverPubkey = new web3.PublicKey(receiver)
+    var tokenPubkey = new web3.PublicKey(tokenMint)
+    var mintData = getMint(conn, tokenPubkey)
+
+    amount = (typeof amount == 'string')?parseInt(amount):amount
+
+    var fromTokenAccount = await getOrCreateAssociatedTokenAccount(conn, senderKeypair, tokenPubkey, senderKeypair.publicKey)
+    var toTokenAccount = await getOrCreateAssociatedTokenAccount(conn, senderKeypair, tokenPubkey, receiverPubkey)
+    let tx = new web3.Transaction();
+    tx.add(
+        createTransferCheckedInstruction(
+          fromTokenAccount.address, // from
+          tokenPubkey, // mint
+          toTokenAccount.address, // to
+          senderKeypair.publicKey, // from's owner
+          amount, // amount
+          (await mintData).decimals // decimals
+        )
+      );
+    tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash
+    tx.sign(senderKeypair)
+    return tx.serialize()
+}
+
+async function sendTx(rawTx: Buffer){
+    return (await conn.sendRawTransaction(rawTx))
+}
 var add1 = {
     publicKey: '6bTxoMU1xBETy81hsG4KSGNEDRL5EqGkzsBCdiGD5dkR',
     privateKey: '49,156,154,199,215,128,48,249,163,170,155,245,91,33,233,17,84,151,244,227,49,228,214,251,66,244,211,146,35,29,194,115,83,30,171,17,82,7,175,145,235,86,113,124,253,80,224,97,194,31,131,115,15,3,104,9,87,39,67,68,86,224,85,230'
@@ -185,8 +216,13 @@ var add2 = {
     publicKey: 'pUvrcENjtEgXEgE9r5Zd4CmLetZgQ4UxNdj6ZL1mbpZ',
     privateKey: '240,251,11,141,152,248,198,235,39,86,126,78,162,195,248,14,174,39,110,147,229,204,103,75,176,251,168,218,86,19,19,70,12,41,224,126,73,170,202,19,171,232,144,27,239,40,76,111,76,202,184,85,137,11,99,34,171,152,204,12,80,186,77,206'
 }
-updateSplBalance(add1.publicKey, "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr").then((val) => {
+
+//, "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"
+sendSplToken(add1, add2.publicKey, 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', '1').then((val) => {
     console.log(val)
+    conn.sendRawTransaction(val).then((val) => {
+        console.log(val)
+    })
 })
 
 export {updateBalances, findNewDeposits, sendTransaction, createTransaction, generateAddr}

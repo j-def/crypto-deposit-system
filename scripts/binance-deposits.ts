@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 const web3 = new Web3('https://data-seed-prebsc-1-s1.binance.org:8545/')
 
-interface EthereumAddressData {
+interface BinanceAddressData {
     publicKey: string | undefined,
     privateKey: string | undefined
 }
@@ -16,13 +16,13 @@ interface BalanceChanges {
 }
 
 
-function generateAddr(): EthereumAddressData{
+function generateAddr(): BinanceAddressData{
     var entropyString = web3.utils.randomHex(32)
     var account = web3.eth.accounts.create(entropyString)
     return {publicKey: account.address, privateKey: account.privateKey}
 }
 
-async function createTransaction(sender: EthereumAddressData, receiver: string, sendAmount: string | number): Promise<string | undefined>{
+async function createTransaction(sender: BinanceAddressData, receiver: string, sendAmount: string | number): Promise<string | undefined>{
     if (typeof sendAmount == 'number'){
         sendAmount = sendAmount.toString()
     }
@@ -214,7 +214,7 @@ async function findNewBep20Deposits(receiver: string, contractAddress: string): 
     return changes
 }
 
-async function withdrawBep20Token(sender: EthereumAddressData, receiver: string, contractAddress: string, amount: string): Promise<string | undefined>{
+async function sendBep20Tokens(sender: BinanceAddressData, receiver: string, contractAddress: string, amount: string){
     var abi = fs.readFileSync(path.join(path.dirname(__dirname), 'contractInterfaces/bep20.abi.json'))
     var contract = new web3.eth.Contract(JSON.parse(abi.toString()) as AbiItem, contractAddress, { from: sender.publicKey })
     if (typeof sender.privateKey != 'string' || typeof sender.publicKey != 'string'){
@@ -223,9 +223,8 @@ async function withdrawBep20Token(sender: EthereumAddressData, receiver: string,
     var count = await web3.eth.getTransactionCount(sender.publicKey)
     var txData = contract.methods.transfer(receiver, amount).encodeABI()
     var tx = {
-        'gasLimit': web3.utils.toHex(2100000),
-        'gasPrice': web3.utils.toHex(2 * 1e10),
-        'to': receiver,
+        'gas': web3.utils.toHex(210000),
+        'to': contractAddress,
         'value': '0x0',
         'data': txData,
         'from': sender.publicKey,
@@ -235,13 +234,12 @@ async function withdrawBep20Token(sender: EthereumAddressData, receiver: string,
     if (typeof signedTx.rawTransaction == 'undefined'){
         return undefined
     }
-    console.log(signedTx.rawTransaction)
     return signedTx.rawTransaction
 }
 
 async function sendTx(signedTx: string){
     var resp = await web3.eth.sendSignedTransaction(signedTx)
-    console.log(resp)
+    return resp
 }
 
 var add1 = {
@@ -261,9 +259,14 @@ var add2 = {
 
 
 
-withdrawBep20Token(add1, add2.publicKey, '0xEC5dCb5Dbf4B114C9d0F65BcCAb49EC54F6A0867', '10000000').then((val) => {
+sendBep20Tokens(add1, add2.publicKey, '0xEC5dCb5Dbf4B114C9d0F65BcCAb49EC54F6A0867', '10000000').then((val) => {
     if (typeof val == 'string'){
-        sendTx(val)
+        findNewBep20Deposits(add2.publicKey, '0xEC5dCb5Dbf4B114C9d0F65BcCAb49EC54F6A0867').then((val) => {
+            console.log(val)
+        })
+        sendTx(val).then((val) => {
+            console.log(val)
+        })
     }
 })
 

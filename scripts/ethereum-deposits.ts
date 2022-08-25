@@ -211,6 +211,51 @@ async function findNewErc20Deposits(receiver: string, contractAddress: string): 
     return changes
 }
 
+async function sendErc20Tokens(sender: EthereumAddressData, receiver: string, contractAddress: string, amount: string){
+    var abi = fs.readFileSync(path.join(path.dirname(__dirname), 'contractInterfaces/erc20.abi.json'))
+    var contract = new web3.eth.Contract(JSON.parse(abi.toString()) as AbiItem, contractAddress, { from: sender.publicKey })
+    if (typeof sender.privateKey != 'string' || typeof sender.publicKey != 'string'){
+        return undefined
+    }
+    var count = await web3.eth.getTransactionCount(sender.publicKey)
+    var txData = contract.methods.transfer(receiver, amount).encodeABI()
+    var tx = {
+        'gas': web3.utils.toHex(210000),
+        'to': contractAddress,
+        'value': '0x0',
+        'data': txData,
+        'from': sender.publicKey,
+        'nonce': count
+    }
+    var signedTx = await web3.eth.accounts.signTransaction(tx, sender.privateKey)
+    if (typeof signedTx.rawTransaction == 'undefined'){
+        return undefined
+    }
+    return signedTx.rawTransaction
+}
+
+async function sendTx(signedTx: string){
+    var resp = await web3.eth.sendSignedTransaction(signedTx)
+    console.log(resp)
+}
+
+var add1 = {
+    publicKey: '0x8afe4a22fBa191f264220130fE7f7EA259c8E263',
+    privateKey: '0x4f987063f65174fce57899e4826eeca4e5f082cc8707f97014d1cd5c73759d2f'
+  }
+
+var add2 = {
+    publicKey: '0x8a2dCd53D8F5585D93c09EA02356453A19841dF9',
+    privateKey: '0x5dfda6914c47209c711d00ba0ed884577638fa396bb55bde3ed243a64db0c39b'
+  }
+
+  sendErc20Tokens(add1, add2.publicKey, '0xBA62BCfcAaFc6622853cca2BE6Ac7d845BC0f2Dc', '1000000000000000000').then(async (val) => {
+    console.log(val)
+    if (typeof val != 'undefined'){
+        var resp = await web3.eth.sendSignedTransaction(val)
+        console.log(resp)
+    }
+})
 
 
 export { updateBalances, generateAddr, createTransaction, findNewDeposits, findNewErc20Deposits, updateErc20Balance}
