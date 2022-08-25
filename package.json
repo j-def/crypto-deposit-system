@@ -31,6 +31,7 @@
     "xrpl": "^2.3.1"
   },
   "devDependencies": {
-    "@types/bitcore-lib": "^0.15.3"
+    "@types/bitcore-lib": "^0.15.3",
+    "coininfo": "^5.2.1"
   }
 }
