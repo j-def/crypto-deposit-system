@@ -141,20 +141,21 @@ async function createTransaction(sender: DogeAddressData, receiver: string, sato
     
 }
 
-var add1 = {
-    publicKey: 'nXys2Sm91M3Gt3KooJHHLZrrzAbZFe8S5Z',
-    privateWIF: 'cfz4xpLcz19Cnb55ERFFbqLFuKrXX94cX6WpcBEW7cKedu2Bpraw'
-  }
+async function sendTx(txData: string){
+    await axios.post("https://sochain.com/api/v2/send_tx/DOGETEST", {"tx_hex": txData})
+}
 
-var add2 = {
-    publicKey: 'nnymy4wn248nDTKXBu6RCw8ZNNE5sTtoEY',
-    privateWIF: 'ckPkRwCheFiRVXhY6dJfh1TkVFdYL9Gd4g7AiGS4FFwH3Eb2akpW'
-  }
-  
+function saveCredentials(creds: DogeAddressData): Boolean{
+    if (typeof creds.publicKey == 'undefined' || typeof creds.privateWIF == 'undefined'){
+        return false
+    }
+    var existingCredsStr = fs.readFileSync(path.join(path.basename(__dirname), "storedKeys/doge-accounts.json"))
+    var existingCreds = JSON.parse(existingCredsStr.toString())
+    if (!Object.keys(existingCreds).includes(creds.publicKey)){
+        existingCreds[creds.publicKey] = creds.privateWIF
+    }
+    fs.writeFileSync(path.join(path.basename(__dirname), "storedKeys/doge-accounts.json"), JSON.stringify(existingCreds))
+    return true
+}
 
-createTransaction(add1, add2.publicKey, 10000000).then((val) => {
-    axios.post("https://sochain.com/api/v2/send_tx/DOGETEST", {"tx_hex": val}).then((val) => {
-        console.log(val.data)
-    })
-})
-export {generateDogeAddress, createTransaction, findNewDeposits, updateBalances}
+export {generateDogeAddress, createTransaction, findNewDeposits, updateBalances, sendTx, saveCredentials}

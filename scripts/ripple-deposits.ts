@@ -113,5 +113,21 @@ async function updateBalances(receiver: string, changesMade: BalanceChanges | un
     return changesMade
 }
 
+function saveCredentials(creds: XRPAddressData): Boolean{
+    if (typeof creds.publicKey == 'undefined' || typeof creds.privateKey == 'undefined'){
+        return false
+    }
+    var existingCredsStr = fs.readFileSync(path.join(path.basename(__dirname), "storedKeys/xrp-accounts.json"))
+    var existingCreds = JSON.parse(existingCredsStr.toString())
+    if (!Object.keys(existingCreds).includes(creds.publicKey)){
+        existingCreds[creds.publicKey] = creds.privateKey
+    }
+    fs.writeFileSync(path.join(path.basename(__dirname), "storedKeys/xrp-accounts.json"), JSON.stringify(existingCreds))
+    return true
+}
 
-export { updateBalances, findNewDeposits, createTransaction, generateAddr}
+async function sendTx(txData: string){
+    var resp = await client.submitAndWait(txData)
+}
+
+export { updateBalances, findNewDeposits, createTransaction, generateAddr, saveCredentials, sendTx}

@@ -143,18 +143,21 @@ async function createTransaction(sender: LitecoinAddressData, receiver: string, 
     
 }
 
-var add1 = {
-    publicKey: 'mhVECZ1mSrqmHtcKJFU19jn6Wpbb9iszAw',
-    privateWIF: 'cR9H3emfNeF45LFK7JrDDbWHYJUS2Bh6WUrDNKajDzCCzeXSkNZu'
-  }
+async function sendTx(txData: string){
+    await axios.post("https://sochain.com/api/v2/send_tx/LTCTEST", {"tx_hex": txData})
+}
 
-var add2 = {
-    publicKey: 'mz8TcgiqBYYCjo1gFKDvyGbsa9vTyAr7wG',
-    privateWIF: 'cUkWnZPCbLc4RvEP4JMw4Lzi8JQUE1o268yiCs3HFLpZz2wbJgiS'
-  }
+function saveCredentials(creds: LitecoinAddressData): Boolean{
+    if (typeof creds.publicKey == 'undefined' || typeof creds.privateWIF == 'undefined'){
+        return false
+    }
+    var existingCredsStr = fs.readFileSync(path.join(path.basename(__dirname), "storedKeys/ltc-accounts.json"))
+    var existingCreds = JSON.parse(existingCredsStr.toString())
+    if (!Object.keys(existingCreds).includes(creds.publicKey)){
+        existingCreds[creds.publicKey] = creds.privateWIF
+    }
+    fs.writeFileSync(path.join(path.basename(__dirname), "storedKeys/ltc-accounts.json"), JSON.stringify(existingCreds))
+    return true
+}
 
-createTransaction(add1, add2.publicKey, 50000) .then((val) => {
-    axios.post("https://sochain.com/api/v2/send_tx/LTCTEST", {"tx_hex": val}).then((val) => {
-        console.log(val.data)
-    })
-})
+export { generateLtcAddr, findNewDeposits, updateBalances, createTransaction, sendTx, saveCredentials}

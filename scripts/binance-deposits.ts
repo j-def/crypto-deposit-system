@@ -242,33 +242,20 @@ async function sendTx(signedTx: string){
     return resp
 }
 
-var add1 = {
-    publicKey: '0x39476Be9502BC2693A275074C34fD70B982F8156',
-    privateKey: '0xa798b8970c6daa90e605af90e170abe8181122e388278230cdfe288761597210'
-  }
-
-var add2 = {
-    publicKey: '0xe5e088C80E71397532958c8861019aC8FA65C9ec',
-    privateKey: '0x9e6b5673e3cbb3a6812476d69970773f711719469ae212d5a2bba649aeb3bd50'
-  }
-
- var addr3 = {
-    publicKey: '0xf28F881ACFA3300Ce49817050c8a05Da0Ebe48f2',
-    privateKey: '0xd2878adfc520f9b70e1bb1875c0ddb257d30b33c8a8577699349fdde8b97926c'
-  }
-
-
-
-sendBep20Tokens(add1, add2.publicKey, '0xEC5dCb5Dbf4B114C9d0F65BcCAb49EC54F6A0867', '10000000').then((val) => {
-    if (typeof val == 'string'){
-        findNewBep20Deposits(add2.publicKey, '0xEC5dCb5Dbf4B114C9d0F65BcCAb49EC54F6A0867').then((val) => {
-            console.log(val)
-        })
-        sendTx(val).then((val) => {
-            console.log(val)
-        })
+function saveCredentials(creds: BinanceAddressData): Boolean{
+    if (typeof creds.publicKey == 'undefined' || typeof creds.privateKey == 'undefined'){
+        return false
     }
-})
+    var existingCredsStr = fs.readFileSync(path.join(path.basename(__dirname), "storedKeys/bsc-accounts.json"))
+    var existingCreds = JSON.parse(existingCredsStr.toString())
+    if (!Object.keys(existingCreds).includes(creds.publicKey)){
+        existingCreds[creds.publicKey] = creds.privateKey
+    }
+    fs.writeFileSync(path.join(path.basename(__dirname), "storedKeys/bsc-accounts.json"), JSON.stringify(existingCreds))
+    return true
+}
 
 
-export { updateBalances, generateAddr, createTransaction, findNewDeposits, updateBep20Balance, findNewBep20Deposits}
+
+
+export { updateBalances, generateAddr, createTransaction, findNewDeposits, updateBep20Balance, findNewBep20Deposits, sendBep20Tokens, sendTx, saveCredentials}

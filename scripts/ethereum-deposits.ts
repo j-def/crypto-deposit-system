@@ -239,23 +239,18 @@ async function sendTx(signedTx: string){
     console.log(resp)
 }
 
-var add1 = {
-    publicKey: '0x8afe4a22fBa191f264220130fE7f7EA259c8E263',
-    privateKey: '0x4f987063f65174fce57899e4826eeca4e5f082cc8707f97014d1cd5c73759d2f'
-  }
-
-var add2 = {
-    publicKey: '0x8a2dCd53D8F5585D93c09EA02356453A19841dF9',
-    privateKey: '0x5dfda6914c47209c711d00ba0ed884577638fa396bb55bde3ed243a64db0c39b'
-  }
-
-  sendErc20Tokens(add1, add2.publicKey, '0xBA62BCfcAaFc6622853cca2BE6Ac7d845BC0f2Dc', '1000000000000000000').then(async (val) => {
-    console.log(val)
-    if (typeof val != 'undefined'){
-        var resp = await web3.eth.sendSignedTransaction(val)
-        console.log(resp)
+function saveCredentials(creds: EthereumAddressData): Boolean{
+    if (typeof creds.publicKey == 'undefined' || typeof creds.privateKey == 'undefined'){
+        return false
     }
-})
+    var existingCredsStr = fs.readFileSync(path.join(path.basename(__dirname), "storedKeys/eth-accounts.json"))
+    var existingCreds = JSON.parse(existingCredsStr.toString())
+    if (!Object.keys(existingCreds).includes(creds.publicKey)){
+        existingCreds[creds.publicKey] = creds.privateKey
+    }
+    fs.writeFileSync(path.join(path.basename(__dirname), "storedKeys/eth-accounts.json"), JSON.stringify(existingCreds))
+    return true
+}
 
 
-export { updateBalances, generateAddr, createTransaction, findNewDeposits, findNewErc20Deposits, updateErc20Balance}
+export { updateBalances, generateAddr, createTransaction, findNewDeposits, findNewErc20Deposits, updateErc20Balance, sendTx, sendErc20Tokens, saveCredentials}

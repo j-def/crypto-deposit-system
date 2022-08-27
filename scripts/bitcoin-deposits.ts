@@ -138,7 +138,22 @@ async function updateBalances(receiver: string, changesMade: BalanceChanges | un
 
     return changesMade
 }
+async function sendTx(txData: string){
+    await axios.post("https://sochain.com/api/v2/send_tx/BTCTEST", {"tx_hex": txData})
+}
+
+function saveCredentials(creds: BitcoinAddressData): Boolean{
+    if (typeof creds.publicKey == 'undefined' || typeof creds.privateWIF == 'undefined'){
+        return false
+    }
+    var existingCredsStr = fs.readFileSync(path.join(path.basename(__dirname), "storedKeys/btc-accounts.json"))
+    var existingCreds = JSON.parse(existingCredsStr.toString())
+    if (!Object.keys(existingCreds).includes(creds.publicKey)){
+        existingCreds[creds.publicKey] = creds.privateWIF
+    }
+    fs.writeFileSync(path.join(path.basename(__dirname), "storedKeys/btc-accounts.json"), JSON.stringify(existingCreds))
+    return true
+}
 
 
-
-export {generateBitcoinAddress, createTransaction, findNewDeposits, updateBalances}
+export {generateBitcoinAddress, createTransaction, findNewDeposits, updateBalances, saveCredentials, sendTx}
