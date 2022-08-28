@@ -265,15 +265,7 @@ function saveCredentials(creds: BinanceAddressData): Boolean{
     return true
 }
 
-findNewDeposits("0x929C66137Af767Eb0BA9bC6e96018668A9D5500f").then((val) => {
-    console.log(val)
-    updateBalances("0x929C66137Af767Eb0BA9bC6e96018668A9D5500f", val)
-    findNewDeposits("0x929C66137Af767Eb0BA9bC6e96018668A9D5500f").then((val) => {
-        console.log(val)
-        updateBalances("0x929C66137Af767Eb0BA9bC6e96018668A9D5500f", val)
 
-    })
-})
 
 
 export { updateBalances, generateAddr, createTransaction, findNewDeposits, updateBep20Balance, findNewBep20Deposits, sendBep20Tokens, sendTx, saveCredentials}

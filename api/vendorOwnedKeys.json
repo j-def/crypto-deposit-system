@@ -1,0 +1,11 @@
+{
+    "Example vendor Id": {
+        "eth": [],
+        "btc": [],
+        "doge": [],
+        "ltc": [],
+        "xrp": [],
+        "bsc": [],
+        "sol": []
+    }
+}

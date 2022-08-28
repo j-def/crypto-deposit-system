@@ -1,6 +1,7 @@
 import * as crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
+import * as utils from './utils'
 
 interface Transaction{
     Id: string,
@@ -34,7 +35,6 @@ interface ItemData{
     itemId?: string,
 }
 
-
 /*
 Transaction Endpoint
 
@@ -43,7 +43,7 @@ GET - /transaction/{txid} - Gets a transactions data
 DELETE - /transaction/{txid} - Cancels a transaction
 */
 
-const generateTransaction = (vendor: string, itemIds: string[], successCallback: string, failureCallback: string) => {
+const postTransaction = (vendor: string, itemIds: string[], successCallback: string, failureCallback: string) => {
     let txid = crypto.randomBytes(14).toString('hex')
     let url = "https://www.example.com/checkout/"+txid.slice(0, 14)
 
@@ -68,7 +68,7 @@ const generateTransaction = (vendor: string, itemIds: string[], successCallback:
     return txData
 }
 
-const cancelTransaction = (vendor: string, txid: string) => {
+const deleteTransaction = (vendor: string, txid: string) => {
     let txDataStr = fs.readFileSync(path.join(__dirname, 'transactionData.json'))
     let txDataJson = JSON.parse(txDataStr.toString())
 
@@ -126,7 +126,7 @@ const postMenu = (vendorid: string, newItem: ItemData) => {
     newItem.itemId = itemid
     vendorDataJson[vendorid].items[itemid] = newItem
     fs.writeFileSync(path.join(__dirname, 'vendorData.json'), JSON.stringify(vendorDataJson));
-
+    return true
 }
 
 const putMenu = (vendorid: string, newItems: ItemData[]) => {
@@ -138,9 +138,17 @@ const putMenu = (vendorid: string, newItems: ItemData[]) => {
     newItems.forEach((item) => {
         item.itemId = crypto.randomBytes(7).toString('hex')
     })
-    //verify each itemid, make sure it is unique
+    let itemIdList = newItems.map((item) => (
+        item.itemId
+    ))
+    itemIdList.forEach((elem, idx, arr) => {
+        while (!utils.isUniqueItem(arr, elem)){
+            newItems[idx].itemId = crypto.randomBytes(7).toString('hex')
+        }
+    })
     vendorDataJson[vendorid].items = newItems
     fs.writeFileSync(path.join(__dirname, 'vendorData.json'), JSON.stringify(vendorDataJson));
+    return true
 }
 
 interface PatchMenuItemUpdate{
@@ -167,7 +175,78 @@ const deleteMenuItem = (vendorid: string, itemId: string) => {
         return false
     }
     delete vendorDataJson[vendorid].items[itemId]
-
     fs.writeFileSync(path.join(__dirname, 'vendorData.json'), JSON.stringify(vendorDataJson));
     return true
+}
+
+/*
+Accepted Chains Endpoint
+
+GET - /accaptedchains - Retreives the accepted chains
+POST - /accaptedchains - Adds an accepted chain
+PUT - /accaptedchains - Replaces accepted chains
+DELETE - /accaptedchains - Deletes an accepted chain
+*/
+
+const getAcceptedChains = (vendorid: string) => {
+    let vendorDataStr = fs.readFileSync(path.join(__dirname, 'vendorData.json'))
+    let vendorDataJson = JSON.parse(vendorDataStr.toString())
+    if (!Object.keys(vendorDataJson).includes(vendorid)){
+        return false
+    }
+    return vendorDataJson[vendorid].acceptedChains
+}
+
+const postAcceptedChains = (vendorid: string, newChain: string) => {
+    let vendorDataStr = fs.readFileSync(path.join(__dirname, 'vendorData.json'))
+    let vendorDataJson = JSON.parse(vendorDataStr.toString())
+    if (!Object.keys(vendorDataJson).includes(vendorid)){
+        return false
+    }
+    if (utils.countItems(vendorDataJson[vendorid].acceptedChains, newChain) == 0){
+        vendorDataJson[vendorid].acceptedChains.push(newChain)
+    }
+    fs.writeFileSync(path.join(__dirname, 'vendorData.json'), JSON.stringify(vendorDataJson));
+    return true
+}
+
+const putAcceptedChains = (vendorid: string, newChains: string[]) => {
+    let vendorDataStr = fs.readFileSync(path.join(__dirname, 'vendorData.json'))
+    let vendorDataJson = JSON.parse(vendorDataStr.toString())
+    if (!Object.keys(vendorDataJson).includes(vendorid)){
+        return false
+    }
+    vendorDataJson[vendorid].acceptedChains = newChains
+    fs.writeFileSync(path.join(__dirname, 'vendorData.json'), JSON.stringify(vendorDataJson));
+    return true
+}
+
+const deleteAcceptedChains = (vendorid: string, oldChain: string) => {
+    let vendorDataStr = fs.readFileSync(path.join(__dirname, 'vendorData.json'))
+    let vendorDataJson = JSON.parse(vendorDataStr.toString())
+    if (!Object.keys(vendorDataJson).includes(vendorid)){
+        return false
+    }
+    if (utils.countItems(vendorDataJson[vendorid].acceptedChains, oldChain) !== 0){
+        delete vendorDataJson[vendorid].acceptedChains[oldChain]
+    }
+    fs.writeFileSync(path.join(__dirname, 'vendorData.json'), JSON.stringify(vendorDataJson));
+    return true
+}
+
+/*
+Balances Endpoint
+
+GET - /balance - Retreives the balance from all chains
+PUT - /balance - Update all balances in all chains
+
+GET - /balance/{chain} - Retreives balance from all chain addresses
+PUT - /balance/{chain} - Updates the blanace of all addresses in the chain
+
+GET - /balance/{chain}/{address} - Retreives balance from specific address
+PUT - /balance/{chain}/{address} - Updates a specific address balance
+*/
+
+const getBalance = (vendorid: string) => {
+    
 }
