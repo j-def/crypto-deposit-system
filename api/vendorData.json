@@ -1,0 +1,20 @@
+{"Example vendor Id": {
+    "name": "Example name",
+    "acceptedChains": ["btc", "eth", "eth:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "bsc", "sol", "sol:2wmVCSfPxGPjrnMMn7rchp4uaeoTqN39mXFC2zhPdri9"],
+    "items": {
+        "Example item id": {
+            "name": "Example Item",
+            "description": "ExmaPLE DESCRIPTION",
+            "itemId": "Example item id",
+            "price": 15.43,
+            "denomination": "usd"
+        },
+        "Example item id2": {
+            "name": "Example Item",
+            "description": "ExmaPLE DESCRIPTION",
+            "itemId": "Example item id",
+            "price": 15.43,
+            "denomination": "usd"
+        }
+    }
+}}

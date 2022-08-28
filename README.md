@@ -3,7 +3,7 @@
 ## Tool to take deposits and payments in cryptocurrency and provide payments to a single address
 
 - [X] Bitcoin
--  Dogecoin
+- [X] Dogecoin
 - [X] Litecoin
 - [X] Ethereum
 - [X] ERC-20

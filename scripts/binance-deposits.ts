@@ -14,6 +14,10 @@ interface BalanceChanges {
     confirmedUpdatedBy: number, 
     unconfirmedUpdatedBy: number
 }
+interface BalanceUpdate{
+    changes: BalanceChanges,
+    transaction: string
+}
 
 
 function generateAddr(): BinanceAddressData{
@@ -60,7 +64,7 @@ async function findNewDeposits(receiver: string | undefined): Promise<BalanceCha
 
     while (tries < retryAmt){
         var currentBlock = await web3.eth.getBlockNumber()
-        var blockConfirmedBalance = await web3.eth.getBalance(receiver, currentBlock-100)
+        var blockConfirmedBalance = await web3.eth.getBalance(receiver, currentBlock-10)
         var blockUnconfirmedBalance = (parseInt(await web3.eth.getBalance(receiver, currentBlock)) - parseInt(blockConfirmedBalance)).toString()
 
         if (blockConfirmedBalance !== customerData.confirmed || blockUnconfirmedBalance !== customerData.unconfirmed){
@@ -78,6 +82,8 @@ async function findNewDeposits(receiver: string | undefined): Promise<BalanceCha
     return undefined
 }
 
+
+
 async function updateBalances(receiver: string | undefined, changesMade: BalanceChanges | undefined = undefined): Promise<BalanceChanges | undefined>{
     if (typeof receiver == "undefined"){
         return undefined
@@ -94,9 +100,13 @@ async function updateBalances(receiver: string | undefined, changesMade: Balance
     if (typeof changesMade == 'undefined'){
         changesMade = {confirmed: "", unconfirmed: "", confirmedUpdatedBy: 0, unconfirmedUpdatedBy: 0}
         var currentBlock = await web3.eth.getBlockNumber()
-        changesMade.confirmed = await web3.eth.getBalance(receiver, currentBlock-100)
+        changesMade.confirmed = await web3.eth.getBalance(receiver, currentBlock-10)
         changesMade.unconfirmed = (parseInt(await web3.eth.getBalance(receiver, currentBlock)) - parseInt(changesMade.confirmed)).toString()
+        console.log(await web3.eth.getBalance(receiver, currentBlock))
+        console.log(await web3.eth.getBalance(receiver, currentBlock-10))
+
     }
+
 
     customerData[receiver].confirmed = changesMade.confirmed
     customerData[receiver].unconfirmed = changesMade.unconfirmed
@@ -131,7 +141,7 @@ async function updateBep20Balance(receiver: string, contractAddress: string, cha
         var unconfirmed = 0
         var blockNumber = await web3.eth.getBlockNumber()
         var pastEvents = await contract.getPastEvents("Transfer", {
-            fromBlock: blockNumber - 100,
+            fromBlock: blockNumber - 10,
             filter: {"to": receiver}
         })
         pastEvents.forEach((val, idx) => {
@@ -187,7 +197,7 @@ async function findNewBep20Deposits(receiver: string, contractAddress: string): 
             confirmed = await contract.methods.balanceOf(receiver).call()
             blockNumber = await web3.eth.getBlockNumber()
             var unconfirmedEvents = await contract.getPastEvents("Transfer", {
-                fromBlock: blockNumber - 100,
+                fromBlock: blockNumber - 10,
                 filter: {"to": receiver}
             })
             if (unconfirmedEvents.length > 0){
@@ -255,7 +265,15 @@ function saveCredentials(creds: BinanceAddressData): Boolean{
     return true
 }
 
+findNewDeposits("0x929C66137Af767Eb0BA9bC6e96018668A9D5500f").then((val) => {
+    console.log(val)
+    updateBalances("0x929C66137Af767Eb0BA9bC6e96018668A9D5500f", val)
+    findNewDeposits("0x929C66137Af767Eb0BA9bC6e96018668A9D5500f").then((val) => {
+        console.log(val)
+        updateBalances("0x929C66137Af767Eb0BA9bC6e96018668A9D5500f", val)
 
+    })
+})
 
 
 export { updateBalances, generateAddr, createTransaction, findNewDeposits, updateBep20Balance, findNewBep20Deposits, sendBep20Tokens, sendTx, saveCredentials}
