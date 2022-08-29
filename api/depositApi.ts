@@ -248,5 +248,55 @@ PUT - /balance/{chain}/{address} - Updates a specific address balance
 */
 
 const getBalance = (vendorid: string) => {
-    
+    let vendorKeysStr = fs.readFileSync(path.join(__dirname, 'vendorOwnedKeys.json'))
+    let vendorKeysJson = JSON.parse(vendorKeysStr.toString())
+    if (!Object.keys(vendorKeysJson).includes(vendorid)){
+        return false
+    }
+    var balances = {}
+    let ownedKeys = vendorKeysJson[vendorid]
+    for (var chain in ownedKeys){
+        let chainBalancesStr = fs.readFileSync(path.join(path.dirname(__dirname), `balances/${chain}-balances.json`))
+        let chainBalancesJson = JSON.parse(chainBalancesStr.toString())
+        balances[chain] = {"confirmed": 0, "unconfirmed": 0}
+        ownedKeys[chain].forEach(( pubkey: string ) => {
+            balances[chain].confirmed += parseFloat(chainBalancesJson[pubkey].confirmed)
+            balances[chain].unconfirmed += Object.keys(chainBalancesJson[pubkey]).includes("unconfirmed")?parseFloat(chainBalancesJson[pubkey].unconfirmed):0
+        })
+        let customToken = ""
+        switch(chain){
+            case "eth":
+                customToken = "erc20"
+                break
+            case "sol":
+                customToken = "spl"
+                break
+            case "bsc":
+                customToken = "bep20"
+                break
+            default:
+                break
+        }
+        if (!customToken){
+            continue
+        }
+
+        //get custom token balances
+        chainBalancesStr = fs.readFileSync(path.join(path.dirname(__dirname), `balances/${customToken}-balances.json`))
+        chainBalancesJson = JSON.parse(chainBalancesStr.toString())
+        balances[customToken] = {"confirmed": 0, "unconfirmed": 0}
+        ownedKeys[chain].forEach(( pubkey: string ) => {
+            for (let tokenAddress in chainBalancesJson){
+                if (!Object.keys(chainBalancesJson[tokenAddress]).includes(pubkey)){
+                    continue
+                }
+                balances[customToken].confirmed += parseFloat(chainBalancesJson[pubkey].confirmed)
+                balances[customToken].unconfirmed += Object.keys(chainBalancesJson[pubkey]).includes("unconfirmed")?parseFloat(chainBalancesJson[pubkey].unconfirmed):0
+            }
+        })
+
+    }
+    console.log(balances)
 }
+
+getBalance("Example vendor Id")

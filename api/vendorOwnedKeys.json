@@ -1,6 +1,6 @@
 {
     "Example vendor Id": {
-        "eth": [],
+        "eth": ["0x08129422279465A3754260eaB46C970616a88Eb6", "0xe5e088C80E71397532958c8861019aC8FA65C9ec"],
         "btc": [],
         "doge": [],
         "ltc": [],
