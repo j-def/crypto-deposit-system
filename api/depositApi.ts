@@ -243,8 +243,11 @@ PUT - /balance - Update all balances in all chains
 GET - /balance/{chain} - Retreives balance from all chain addresses
 PUT - /balance/{chain} - Updates the blanace of all addresses in the chain
 
-GET - /balance/{chain}/{address} - Retreives balance from specific address
-PUT - /balance/{chain}/{address} - Updates a specific address balance
+GET - /balance/{chain}/{address} - Retreives balance from specific address and chain
+PUT - /balance/{chain}/{address} - Updates a specific address balance and chain
+
+GET - /balance/{address} - Retreives balance from specific address
+PUT - /balance/{address} - Updates a specific address balance
 */
 
 const getBalance = (vendorid: string) => {
@@ -253,7 +256,7 @@ const getBalance = (vendorid: string) => {
     if (!Object.keys(vendorKeysJson).includes(vendorid)){
         return false
     }
-    var balances = {}
+    var balances: any = {}
     let ownedKeys = vendorKeysJson[vendorid]
     for (var chain in ownedKeys){
         let chainBalancesStr = fs.readFileSync(path.join(path.dirname(__dirname), `balances/${chain}-balances.json`))
@@ -296,7 +299,74 @@ const getBalance = (vendorid: string) => {
         })
 
     }
-    console.log(balances)
+
 }
 
-getBalance("Example vendor Id")
+const getBalanceChain = (vendorid: string, chain: string) => {
+    let vendorKeysStr = fs.readFileSync(path.join(__dirname, 'vendorOwnedKeys.json'))
+    let vendorKeysJson = JSON.parse(vendorKeysStr.toString())
+    if (!Object.keys(vendorKeysJson).includes(vendorid)){
+        return false
+    }
+    var balances: any = {}
+    let ownedKeys = vendorKeysJson[vendorid]
+    if (chain !== "erc20" && chain !== "bep20" && chain !== "spl"){
+        balances[chain] = {"confirmed": 0, "unconfirmed": 0}
+        let chainBalancesStr = fs.readFileSync(path.join(path.dirname(__dirname), `balances/${chain}-balances.json`))
+        let chainBalancesJson = JSON.parse(chainBalancesStr.toString())
+        ownedKeys[chain].forEach(( pubkey: string ) => {
+            balances[chain].confirmed += parseFloat(chainBalancesJson[pubkey].confirmed)
+            balances[chain].unconfirmed += Object.keys(chainBalancesJson[pubkey]).includes("unconfirmed")?parseFloat(chainBalancesJson[pubkey].unconfirmed):0
+        })
+    } else {
+        balances[chain] = {}
+        let chainBalancesStr = fs.readFileSync(path.join(path.dirname(__dirname), `balances/${chain}-balances.json`))
+        let chainBalancesJson = JSON.parse(chainBalancesStr.toString())
+        ownedKeys[chain].forEach(( pubkey: string ) => { 
+            for (let tokenAddress in chainBalancesJson){
+                if (!Object.keys(chainBalancesJson[tokenAddress]).includes(pubkey)){
+                    continue
+                }
+                if (!Object.keys(balances[chain][tokenAddress]).includes("confirmed")){
+                    balances[chain][tokenAddress] = {"confirmed": 0, "unconfirmed": 0}
+                }
+                balances[chain][tokenAddress].confirmed += parseFloat(chainBalancesJson[tokenAddress][pubkey].confirmed)
+                balances[chain][tokenAddress].unconfirmed += Object.keys(chainBalancesJson[tokenAddress][pubkey]).includes("unconfirmed")?parseFloat(chainBalancesJson[pubkey].unconfirmed):0
+            }
+        })
+    }
+    return balances
+}
+
+
+const getBalanceChainAddress = (vendorid: string, chain: string, pubkey: string) => {
+    let vendorKeysStr = fs.readFileSync(path.join(__dirname, 'vendorOwnedKeys.json'))
+    let vendorKeysJson = JSON.parse(vendorKeysStr.toString())
+    let balances: any = {}
+    if (!Object.keys(vendorKeysJson).includes(vendorid) || !vendorKeysJson[vendorid][chain].includes(pubkey)){
+        return false
+    }
+    if (chain !== "erc20" && chain !== "bep20" && chain !== "spl"){
+        balances[chain] = {"confirmed": 0, "unconfirmed": 0}
+        let chainBalancesStr = fs.readFileSync(path.join(path.dirname(__dirname), `balances/${chain}-balances.json`))
+        let chainBalancesJson = JSON.parse(chainBalancesStr.toString())
+        balances[chain].confirmed += parseFloat(chainBalancesJson[pubkey].confirmed)
+        balances[chain].unconfirmed += Object.keys(chainBalancesJson[pubkey]).includes("unconfirmed")?parseFloat(chainBalancesJson[pubkey].unconfirmed):0
+    }
+    else {
+        balances[chain] = {}
+        let chainBalancesStr = fs.readFileSync(path.join(path.dirname(__dirname), `balances/${chain}-balances.json`))
+        let chainBalancesJson = JSON.parse(chainBalancesStr.toString())
+        for (let tokenAddress in chainBalancesJson){
+            if (!Object.keys(chainBalancesJson[tokenAddress]).includes(pubkey)){
+                continue
+            }
+            if (!Object.keys(balances[chain][tokenAddress]).includes("confirmed")){
+                balances[chain][tokenAddress] = {"confirmed": 0, "unconfirmed": 0}
+            }
+            balances[chain][tokenAddress].confirmed += parseFloat(chainBalancesJson[tokenAddress][pubkey].confirmed)
+            balances[chain][tokenAddress].unconfirmed += Object.keys(chainBalancesJson[tokenAddress][pubkey]).includes("unconfirmed")?parseFloat(chainBalancesJson[pubkey].unconfirmed):0
+        }
+    }
+    return balances
+}
