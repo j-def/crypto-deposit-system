@@ -222,4 +222,4 @@ function saveCredentials(creds: SolanaAddressData): Boolean{
     return true
 }
 
-export {updateBalances, findNewDeposits, sendTransaction, createTransaction, generateAddr, sendTx, saveCredentials}
+export {updateBalances, findNewDeposits, sendTransaction, createTransaction, generateAddr, sendTx, saveCredentials, sendSplToken, updateSplBalance, findNewSplDeposits}

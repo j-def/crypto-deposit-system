@@ -2,6 +2,13 @@ import * as crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import * as utils from './utils'
+import * as bsc from '../scripts/binance-deposits'
+import * as eth from '../scripts/ethereum-deposits'
+import * as btc from '../scripts/bitcoin-deposits'
+import * as ltc from '../scripts/litecoin-deposits'
+import * as doge from '../scripts/dogecoin-deposits'
+import * as sol from '../scripts/solana-deposits'
+import * as xrp from '../scripts/ripple-deposits'
 
 interface Transaction{
     Id: string,
@@ -198,6 +205,8 @@ const getAcceptedChains = (vendorid: string) => {
 }
 
 const postAcceptedChains = (vendorid: string, newChain: string) => {
+        //chain Options : ["eth", "btc", "bsc", "sol", "xrp", "ltc", "doge", "erc20", "bep20", "spl"]
+
     let vendorDataStr = fs.readFileSync(path.join(__dirname, 'vendorData.json'))
     let vendorDataJson = JSON.parse(vendorDataStr.toString())
     if (!Object.keys(vendorDataJson).includes(vendorid)){
@@ -211,6 +220,8 @@ const postAcceptedChains = (vendorid: string, newChain: string) => {
 }
 
 const putAcceptedChains = (vendorid: string, newChains: string[]) => {
+        //chain Options : ["eth", "btc", "bsc", "sol", "xrp", "ltc", "doge", "erc20", "bep20", "spl"]
+
     let vendorDataStr = fs.readFileSync(path.join(__dirname, 'vendorData.json'))
     let vendorDataJson = JSON.parse(vendorDataStr.toString())
     if (!Object.keys(vendorDataJson).includes(vendorid)){
@@ -222,6 +233,8 @@ const putAcceptedChains = (vendorid: string, newChains: string[]) => {
 }
 
 const deleteAcceptedChains = (vendorid: string, oldChain: string) => {
+        //chain Options : ["eth", "btc", "bsc", "sol", "xrp", "ltc", "doge", "erc20", "bep20", "spl"]
+
     let vendorDataStr = fs.readFileSync(path.join(__dirname, 'vendorData.json'))
     let vendorDataJson = JSON.parse(vendorDataStr.toString())
     if (!Object.keys(vendorDataJson).includes(vendorid)){
@@ -245,9 +258,6 @@ PUT - /balance/{chain} - Updates the blanace of all addresses in the chain
 
 GET - /balance/{chain}/{address} - Retreives balance from specific address and chain
 PUT - /balance/{chain}/{address} - Updates a specific address balance and chain
-
-GET - /balance/{address} - Retreives balance from specific address
-PUT - /balance/{address} - Updates a specific address balance
 */
 
 const getBalance = (vendorid: string) => {
@@ -302,7 +312,85 @@ const getBalance = (vendorid: string) => {
 
 }
 
+const putBalance = (vendorid: string) => {
+    let vendorKeysStr = fs.readFileSync(path.join(__dirname, 'vendorOwnedKeys.json'))
+    let vendorKeysJson = JSON.parse(vendorKeysStr.toString())
+    if (!Object.keys(vendorKeysJson).includes(vendorid)){
+        return false
+    }
+    var chainList = ["eth", "btc", "bsc", "sol", "xrp", "ltc", "doge"]
+    let balances: any = {}
+    
+    for (var chain of chainList){
+        switch(chain){
+            case "eth":
+                var customTokensData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/erc20-balances.json'));
+                var CustomTokensData = JSON.parse(customTokensData.toString());
+    
+                vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                    balances[chain][pubkey] = eth.updateBalances(pubkey)
+                    for (var tokenAddress in CustomTokensData){
+                        if (CustomTokensData[tokenAddress].includes(pubkey)){
+                            balances['erc20'][tokenAddress][pubkey] = eth.updateErc20Balance(pubkey, tokenAddress)
+                        }
+                    }
+                })
+    
+                break
+            case "btc":
+                vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                    balances[chain] = btc.updateBalances(pubkey)
+                })
+                break
+            case "ltc":
+                vendorKeysJson[vendorid][chain].forEach((pubkey: string ) => {
+                    balances[chain] = ltc.updateBalances(pubkey)
+                })
+                break
+            case "doge":
+                vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                    balances[chain] = doge.updateBalances(pubkey)
+                })
+                break
+            case "xrp":
+                vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                    balances[chain] = xrp.updateBalances(pubkey)
+                })
+                break
+            case "bsc":
+                var customTokensData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/bep20-balances.json'));
+                var CustomTokensData = JSON.parse(customTokensData.toString());
+    
+                vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                    balances[chain][pubkey] = bsc.updateBalances(pubkey)
+                    for (var tokenAddress in CustomTokensData){
+                        if (CustomTokensData[tokenAddress].includes(pubkey)){
+                            balances['bep20'][tokenAddress][pubkey] = bsc.updateBep20Balance(pubkey, tokenAddress)
+                        }
+                    }
+                })
+                break
+            case "sol":
+                var customTokensData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/spl-balances.json'));
+                var CustomTokensData = JSON.parse(customTokensData.toString());
+    
+                vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                    balances[chain][pubkey] = sol.updateBalances(pubkey)
+                    for (var tokenAddress in CustomTokensData){
+                        if (CustomTokensData[tokenAddress].includes(pubkey)){
+                            balances['spl'][tokenAddress][pubkey] = sol.updateSplBalance(pubkey, tokenAddress)
+                        }
+                    }
+                })
+                break
+        }
+    }
+    return balances
+}
+
 const getBalanceChain = (vendorid: string, chain: string) => {
+        //chain Options : ["eth", "btc", "bsc", "sol", "xrp", "ltc", "doge", "erc20", "bep20", "spl"]
+
     let vendorKeysStr = fs.readFileSync(path.join(__dirname, 'vendorOwnedKeys.json'))
     let vendorKeysJson = JSON.parse(vendorKeysStr.toString())
     if (!Object.keys(vendorKeysJson).includes(vendorid)){
@@ -338,8 +426,81 @@ const getBalanceChain = (vendorid: string, chain: string) => {
     return balances
 }
 
+const putBalanceChain = (vendorid: string, chain: string) => {
+    let vendorKeysStr = fs.readFileSync(path.join(__dirname, 'vendorOwnedKeys.json'))
+    let vendorKeysJson = JSON.parse(vendorKeysStr.toString())
+    if (!Object.keys(vendorKeysJson).includes(vendorid)){
+        return false
+    }
+    let balances: any = {}
+    switch(chain){
+        case "eth":
+            var customTokensData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/erc20-balances.json'));
+            var CustomTokensData = JSON.parse(customTokensData.toString());
+
+            vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                balances[chain][pubkey] = eth.updateBalances(pubkey)
+                for (var tokenAddress in CustomTokensData){
+                    if (CustomTokensData[tokenAddress].includes(pubkey)){
+                        balances['erc20'][tokenAddress][pubkey] = eth.updateErc20Balance(pubkey, tokenAddress)
+                    }
+                }
+            })
+
+            break
+        case "btc":
+            vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                balances[chain] = btc.updateBalances(pubkey)
+            })
+            break
+        case "ltc":
+            vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                balances[chain] = ltc.updateBalances(pubkey)
+            })
+            break
+        case "doge":
+            vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                balances[chain] = doge.updateBalances(pubkey)
+            })
+            break
+        case "xrp":
+            vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                balances[chain] = xrp.updateBalances(pubkey)
+            })
+            break
+        case "bsc":
+            var customTokensData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/bep20-balances.json'));
+            var CustomTokensData = JSON.parse(customTokensData.toString());
+
+            vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                balances[chain][pubkey] = bsc.updateBalances(pubkey)
+                for (var tokenAddress in CustomTokensData){
+                    if (CustomTokensData[tokenAddress].includes(pubkey)){
+                        balances['bep20'][tokenAddress][pubkey] = bsc.updateBep20Balance(pubkey, tokenAddress)
+                    }
+                }
+            })
+            break
+        case "sol":
+            var customTokensData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/spl-balances.json'));
+            var CustomTokensData = JSON.parse(customTokensData.toString());
+
+            vendorKeysJson[vendorid][chain].forEach((pubkey: string) => {
+                balances[chain][pubkey] = sol.updateBalances(pubkey)
+                for (var tokenAddress in CustomTokensData){
+                    if (CustomTokensData[tokenAddress].includes(pubkey)){
+                        balances['spl'][tokenAddress][pubkey] = sol.updateSplBalance(pubkey, tokenAddress)
+                    }
+                }
+            })
+            break
+    }
+    return balances
+}
 
 const getBalanceChainAddress = (vendorid: string, chain: string, pubkey: string) => {
+    //chain Options : ["eth", "btc", "bsc", "sol", "xrp", "ltc", "doge", "erc20", "bep20", "spl"]
+
     let vendorKeysStr = fs.readFileSync(path.join(__dirname, 'vendorOwnedKeys.json'))
     let vendorKeysJson = JSON.parse(vendorKeysStr.toString())
     let balances: any = {}
@@ -367,6 +528,61 @@ const getBalanceChainAddress = (vendorid: string, chain: string, pubkey: string)
             balances[chain][tokenAddress].confirmed += parseFloat(chainBalancesJson[tokenAddress][pubkey].confirmed)
             balances[chain][tokenAddress].unconfirmed += Object.keys(chainBalancesJson[tokenAddress][pubkey]).includes("unconfirmed")?parseFloat(chainBalancesJson[pubkey].unconfirmed):0
         }
+    }
+    return balances
+}
+
+const putBalanceChainAddress = (vendorid: string, chain: string, pubkey: string) => {
+    //chainOptions : ["eth", "btc", "bsc", "sol", "xrp", "ltc", "doge"]
+    let vendorKeysStr = fs.readFileSync(path.join(__dirname, 'vendorOwnedKeys.json'))
+    let vendorKeysJson = JSON.parse(vendorKeysStr.toString())
+    if (!Object.keys(vendorKeysJson).includes(vendorid) || !vendorKeysJson[vendorid][chain].includes(pubkey)){
+        return false
+    }
+    var balances: any = {}
+    switch(chain){
+        case "eth":
+            balances[chain] = eth.updateBalances(pubkey)
+            var customTokensData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/erc20-balances.json'));
+            var CustomTokensData = JSON.parse(customTokensData.toString());
+            for (var tokenAddress in CustomTokensData){
+                if (Object.keys(CustomTokensData[tokenAddress]).includes(pubkey)){
+                    balances[tokenAddress] =eth.updateErc20Balance(pubkey, tokenAddress)
+                }
+            }
+            break
+        case "btc":
+            balances[chain] = btc.updateBalances(pubkey)
+            break
+        case "ltc":
+            balances[chain] = ltc.updateBalances(pubkey)
+            break
+        case "doge":
+            balances[chain] = doge.updateBalances(pubkey)
+            break
+        case "xrp":
+            balances[chain] = xrp.updateBalances(pubkey)
+            break
+        case "bsc":
+            balances[chain] = bsc.updateBalances(pubkey)
+            var customTokensData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/bep20-balances.json'));
+            var CustomTokensData = JSON.parse(customTokensData.toString());
+            for (var tokenAddress in CustomTokensData){
+                if (Object.keys(CustomTokensData[tokenAddress]).includes(pubkey)){
+                    balances[tokenAddress] = bsc.updateBep20Balance(pubkey, tokenAddress)
+                }
+            }
+            break
+        case "sol":
+            balances[chain] = sol.updateBalances(pubkey)
+            var customTokensData = fs.readFileSync(path.join(path.dirname(__dirname), 'balances/erc20-balances.json'));
+            var CustomTokensData = JSON.parse(customTokensData.toString());
+            for (var tokenAddress in CustomTokensData){
+                if (Object.keys(CustomTokensData[tokenAddress]).includes(pubkey)){
+                    balances[tokenAddress] = sol.updateSplBalance(pubkey, tokenAddress)
+                }
+            }
+            break
     }
     return balances
 }

@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@types/bitcore-lib": "^0.15.3",
+    "@types/node": "^18.7.14",
     "coininfo": "^5.2.1",
     "litecore-lib": "^0.13.22"
   }
